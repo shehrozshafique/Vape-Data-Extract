@@ -4,6 +4,9 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { getActiveProject, getProjects } from "@/lib/queries/projects";
 
+/** Dashboard data depends on cookies + Supabase — never statically prerender. */
+export const dynamic = "force-dynamic";
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");

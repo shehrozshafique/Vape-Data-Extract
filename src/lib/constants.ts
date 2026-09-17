@@ -1,8 +1,8 @@
 export const MAX_COMPETITORS = Number(process.env.MAX_COMPETITORS ?? 10);
 
-/** Temporary local-dev bypass — skips login and uses the service-role client for data access.
- * Set DISABLE_AUTH=false (or remove it) when you want real Supabase auth again. */
-export const AUTH_DISABLED = process.env.DISABLE_AUTH !== "false";
+/** Temporary bypass — skips login and uses the service-role client.
+ * Opt-in only: set DISABLE_AUTH=true in .env.local / Vercel. Production defaults to auth on. */
+export const AUTH_DISABLED = process.env.DISABLE_AUTH === "true";
 
 /** Consecutive scans a product must be absent from the sitemap before it's flagged
  * "Possibly Removed" — protects against a temporary sitemap glitch reading as a real removal. */
