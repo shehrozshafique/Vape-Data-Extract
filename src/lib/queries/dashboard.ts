@@ -8,8 +8,10 @@ export interface DashboardKpis {
   newThisWeek: number;
   newThisMonth: number;
   toDo: number;
+  pending: number;
   processing: number;
-  added: number;
+  done: number;
+  notNeed: number;
   activeCompetitors: number;
 }
 
@@ -56,18 +58,19 @@ export async function getDashboardKpis(competitorId?: string, projectCompetitorI
     /* empty project */
   }
 
-  const [newToday, newYesterday, newThisWeek, newThisMonth, toDo, processing, added, activeCompetitorsResult] = await Promise.all([
-    countProductsSince(supabase, today.from, today.to, competitorId, projectCompetitorIds),
-    countProductsSince(supabase, yesterday.from, yesterday.to, competitorId, projectCompetitorIds),
-    countProductsSince(supabase, thisWeek.from, thisWeek.to, competitorId, projectCompetitorIds),
-    countProductsSince(supabase, thisMonth.from, thisMonth.to, competitorId, projectCompetitorIds),
-    countTasksByStatus("to_do"),
-    countTasksByStatus("processing"),
-    countTasksByStatus("added"),
-    scopeIds && scopeIds.length === 0
-      ? Promise.resolve({ count: 0 })
-      : activeQuery,
-  ]);
+  const [newToday, newYesterday, newThisWeek, newThisMonth, toDo, pending, processing, done, notNeed, activeCompetitorsResult] =
+    await Promise.all([
+      countProductsSince(supabase, today.from, today.to, competitorId, projectCompetitorIds),
+      countProductsSince(supabase, yesterday.from, yesterday.to, competitorId, projectCompetitorIds),
+      countProductsSince(supabase, thisWeek.from, thisWeek.to, competitorId, projectCompetitorIds),
+      countProductsSince(supabase, thisMonth.from, thisMonth.to, competitorId, projectCompetitorIds),
+      countTasksByStatus("to_do"),
+      countTasksByStatus("pending"),
+      countTasksByStatus("processing"),
+      countTasksByStatus("done"),
+      countTasksByStatus("not_need"),
+      scopeIds && scopeIds.length === 0 ? Promise.resolve({ count: 0 }) : activeQuery,
+    ]);
 
   return {
     newToday,
@@ -75,8 +78,10 @@ export async function getDashboardKpis(competitorId?: string, projectCompetitorI
     newThisWeek,
     newThisMonth,
     toDo,
+    pending,
     processing,
-    added,
+    done,
+    notNeed,
     activeCompetitors: activeCompetitorsResult.count ?? 0,
   };
 }

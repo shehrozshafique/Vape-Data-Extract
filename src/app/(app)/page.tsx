@@ -91,14 +91,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <DashboardFilters competitors={competitors.map((c) => ({ id: c.id, name: c.name }))} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-8">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-10">
         <KpiCard label="New Today" value={kpis.newToday} icon={PackageSearch} accent="blue" />
         <KpiCard label="New Yesterday" value={kpis.newYesterday} icon={Clock} />
         <KpiCard label="New This Week" value={kpis.newThisWeek} icon={PackageSearch} accent="blue" />
         <KpiCard label="New This Month" value={kpis.newThisMonth} icon={PackageSearch} accent="blue" />
-        <KpiCard label="Waiting: To Do" value={kpis.toDo} icon={ListTodo} accent="blue" />
+        <KpiCard label="To-do" value={kpis.toDo} icon={ListTodo} accent="blue" />
+        <KpiCard label="Pending" value={kpis.pending} icon={Clock} />
         <KpiCard label="Processing" value={kpis.processing} icon={Loader2} accent="amber" />
-        <KpiCard label="Added" value={kpis.added} icon={CheckCircle2} accent="green" />
+        <KpiCard label="Done" value={kpis.done} icon={CheckCircle2} accent="green" />
+        <KpiCard label="Not Need" value={kpis.notNeed} icon={ListTodo} />
         <KpiCard label="Active Competitors" value={kpis.activeCompetitors} icon={Radar} />
       </div>
 
