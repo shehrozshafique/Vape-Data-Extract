@@ -6,9 +6,18 @@ import type { Database } from "@/lib/supabase/database.types";
 export type Project = Database["public"]["Tables"]["projects"]["Row"];
 
 export async function getProjects(): Promise<Project[]> {
-  const supabase = await createClient();
-  const { data } = await supabase.from("projects").select("*").order("name", { ascending: true });
-  return data ?? [];
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.from("projects").select("*").order("name", { ascending: true });
+    if (error) {
+      console.error("getProjects:", error.message);
+      return [];
+    }
+    return data ?? [];
+  } catch (err) {
+    console.error("getProjects failed:", err);
+    return [];
+  }
 }
 
 export async function getProjectById(id: string): Promise<Project | null> {
