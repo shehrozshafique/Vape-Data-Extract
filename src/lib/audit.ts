@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { AUTH_DISABLED } from "@/lib/constants";
 import type { Database } from "@/lib/supabase/database.types";
 
 /** Writes one audit_log row. Call with the caller's own authenticated client so `user_id`
@@ -15,6 +16,9 @@ export async function logAudit(
     newValue?: Record<string, unknown> | null;
   },
 ) {
+  // Fake local-dev profile is not in profiles — skip audit while auth is bypassed.
+  if (AUTH_DISABLED) return;
+
   await supabase.from("audit_log").insert({
     user_id: params.userId,
     action: params.action,

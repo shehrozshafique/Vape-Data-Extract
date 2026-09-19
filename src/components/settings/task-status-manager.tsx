@@ -15,6 +15,9 @@ import type { TaskStatus } from "@/lib/queries/task-statuses";
 import { Plus } from "lucide-react";
 
 const COLORS = Object.keys(STATUS_COLOR_CLASSES);
+const COLOR_ITEMS = Object.fromEntries(
+  COLORS.map((color) => [color, color.charAt(0).toUpperCase() + color.slice(1)]),
+);
 
 function StatusRow({ status }: { status: TaskStatus }) {
   const [isPending, startTransition] = useTransition();
@@ -34,11 +37,15 @@ function StatusRow({ status }: { status: TaskStatus }) {
     <div className="flex flex-wrap items-center gap-2 rounded-md border p-3">
       <StatusBadge label={status.label} color={status.color} className="mr-2" />
       <Input value={label} onChange={(e) => setLabel(e.target.value)} className="h-8 w-40" />
-      <Select value={color} onValueChange={(v) => v && setColor(v)}>
-        <SelectTrigger className="h-8 w-28"><SelectValue /></SelectTrigger>
+      <Select value={color} items={COLOR_ITEMS} onValueChange={(v) => v && setColor(v)}>
+        <SelectTrigger className="h-8 w-28" aria-label="Status color">
+          <SelectValue placeholder="Color" />
+        </SelectTrigger>
         <SelectContent>
           {COLORS.map((c) => (
-            <SelectItem key={c} value={c}>{c}</SelectItem>
+            <SelectItem key={c} value={c} label={COLOR_ITEMS[c]}>
+              {COLOR_ITEMS[c]}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
@@ -93,11 +100,15 @@ export function TaskStatusManager({ statuses }: { statuses: TaskStatus[] }) {
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Color</Label>
-            <Select value={newColor} onValueChange={(v) => v && setNewColor(v)}>
-              <SelectTrigger className="h-8 w-28"><SelectValue /></SelectTrigger>
+            <Select value={newColor} items={COLOR_ITEMS} onValueChange={(v) => v && setNewColor(v)}>
+              <SelectTrigger className="h-8 w-28" aria-label="New status color">
+                <SelectValue placeholder="Color" />
+              </SelectTrigger>
               <SelectContent>
                 {COLORS.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                  <SelectItem key={c} value={c} label={COLOR_ITEMS[c]}>
+                    {COLOR_ITEMS[c]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

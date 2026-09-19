@@ -31,6 +31,7 @@ export function UserRoleManager({ profiles, currentUserId }: { profiles: Profile
             </div>
             <Select
               defaultValue={profile.role}
+              items={ROLE_LABELS}
               disabled={isPending || profile.id === currentUserId}
               onValueChange={(v) => {
                 if (!v) return;
@@ -40,10 +41,14 @@ export function UserRoleManager({ profiles, currentUserId }: { profiles: Profile
                 });
               }}
             >
-              <SelectTrigger className="h-8 w-40"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 w-44" aria-label={`Role for ${profile.name ?? profile.email}`}>
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
               <SelectContent>
                 {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                  <SelectItem key={value} value={value} label={label}>
+                    {label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

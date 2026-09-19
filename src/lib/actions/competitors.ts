@@ -3,12 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { requirePermission, requireRole } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { competitorFormSchema } from "@/lib/validation/competitor";
 import { extractDomain } from "@/lib/crawler/normalize-url";
 import { scanCompetitor } from "@/lib/crawler/scan-competitor";
-import { DEFAULT_SCAN_FREQUENCY_MINUTES, MAX_COMPETITORS } from "@/lib/constants";
+import { DEFAULT_SCAN_FREQUENCY_MINUTES, MAX_COMPETITORS, AUTH_DISABLED } from "@/lib/constants";
 
 export type ActionResult = { success: true } | { success: false; error: string };
 
@@ -47,7 +47,7 @@ export async function createCompetitor(formData: FormData): Promise<ActionResult
         scan_frequency_minutes: parsed.data.scan_frequency_minutes || DEFAULT_SCAN_FREQUENCY_MINUTES,
         baseline_import_as_tasks: parsed.data.baseline_import_as_tasks,
         notes: parsed.data.notes || null,
-        created_by: profile.id,
+        created_by: AUTH_DISABLED ? null : profile.id,
       })
       .select("id")
       .single();
@@ -133,10 +133,12 @@ export async function updateCompetitor(competitorId: string, formData: FormData)
 
 export async function deleteCompetitor(competitorId: string): Promise<ActionResult> {
   try {
-    const profile = await requireRole("super_admin");
+    const profile = await requirePermission("can_manage_competitors");
     const supabase = await createClient();
 
     const { data: before } = await supabase.from("competitors").select("*").eq("id", competitorId).single();
+    if (!before) return { success: false, error: "Competitor not found" };
+
     const { error } = await supabase.from("competitors").delete().eq("id", competitorId);
     if (error) return { success: false, error: error.message };
 
@@ -149,6 +151,10 @@ export async function deleteCompetitor(competitorId: string): Promise<ActionResu
     });
 
     revalidatePath("/competitors");
+    revalidatePath("/tasks");
+    revalidatePath("/");
+    revalidatePath("/activity");
+    revalidatePath("/projects");
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Unexpected error" };
@@ -183,7 +189,7 @@ export async function setCompetitorStatus(competitorId: string, status: "active"
  * function timeouts, and the caller gets an immediate success/failure result instead of having
  * to poll.
  */
-export async function triggerManualScan(competitorId: string): Promise<ActionResult> {
+export async function triggerManualScan(competitorId: string): Promise<ActionResult & { newProducts?: number }> {
   try {
     const profile = await requirePermission("can_scan");
     const outcome = await scanCompetitor(competitorId, { trigger: "manual", triggeredByUserId: profile.id });
@@ -198,7 +204,79 @@ export async function triggerManualScan(competitorId: string): Promise<ActionRes
     revalidatePath("/tasks");
     revalidatePath("/activity");
 
-    return { success: true };
+    return { success: true, newProducts: outcome.newUrls ?? 0 };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Unexpected error" };
+  }
+}
+
+export type ProjectScanResult =
+  | {
+      success: true;
+      scanned: number;
+      skipped: number;
+      newProducts: number;
+      details: { name: string; newProducts: number; skipped?: string }[];
+    }
+  | { success: false; error: string };
+
+/** Scans every active competitor in a project and returns how many new products were found. */
+export async function triggerProjectScan(projectId: string): Promise<ProjectScanResult> {
+  try {
+    const profile = await requirePermission("can_scan");
+    const supabase = await createClient();
+
+    const { data: competitors, error } = await supabase
+      .from("competitors")
+      .select("id, name")
+      .eq("project_id", projectId)
+      .eq("status", "active")
+      .order("name", { ascending: true });
+
+    if (error) return { success: false, error: error.message };
+    if (!competitors || competitors.length === 0) {
+      return { success: false, error: "No active competitors to scan for this project." };
+    }
+
+    let scanned = 0;
+    let skipped = 0;
+    let newProducts = 0;
+    const details: { name: string; newProducts: number; skipped?: string }[] = [];
+
+    // Sequential keeps Vercel function time and sitemap hosts happier than a parallel burst.
+    for (const competitor of competitors) {
+      const outcome = await scanCompetitor(competitor.id, {
+        trigger: "manual",
+        triggeredByUserId: profile.id,
+      });
+
+      if (outcome.skipped) {
+        skipped += 1;
+        details.push({ name: competitor.name, newProducts: 0, skipped: outcome.skipReason });
+        continue;
+      }
+
+      scanned += 1;
+      const found = outcome.newUrls ?? 0;
+      newProducts += found;
+      details.push({ name: competitor.name, newProducts: found });
+    }
+
+    await logAudit(supabase, {
+      userId: profile.id,
+      action: "project.scanned",
+      entityType: "project",
+      entityId: projectId,
+      newValue: { scanned, skipped, newProducts },
+    });
+
+    revalidatePath("/competitors");
+    revalidatePath("/");
+    revalidatePath("/tasks");
+    revalidatePath("/activity");
+    revalidatePath("/projects");
+
+    return { success: true, scanned, skipped, newProducts, details };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Unexpected error" };
   }

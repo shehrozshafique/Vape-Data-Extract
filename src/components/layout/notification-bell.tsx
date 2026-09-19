@@ -18,7 +18,9 @@ export function NotificationBell({ notifications, unreadCount }: { notifications
   const router = useRouter();
 
   useEffect(() => {
-    const id = setInterval(() => router.refresh(), 45_000);
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") router.refresh();
+    }, 90_000);
     return () => clearInterval(id);
   }, [router]);
 

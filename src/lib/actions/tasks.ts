@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireRole } from "@/lib/auth";
+import { requirePermission, requireRole } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { extractProductFromUrl } from "@/lib/crawler/extract";
 import { hasAnySpec } from "@/lib/crawler/spec-extraction";
@@ -219,6 +219,64 @@ export async function rescanProduct(productId: string): Promise<ActionResult> {
     });
 
     revalidatePath("/tasks");
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Unexpected error" };
+  }
+}
+
+/** Deletes the product (and cascaded task/history/specs). May reappear on a later scan if still listed. */
+export async function deleteTask(taskId: string): Promise<ActionResult> {
+  try {
+    const profile = await requirePermission("can_edit_tasks");
+    const supabase = await createClient();
+
+    const { data: task } = await supabase.from("tasks").select("id, product_id").eq("id", taskId).single();
+    if (!task) return { success: false, error: "Task not found" };
+
+    const { error } = await supabase.from("products").delete().eq("id", task.product_id);
+    if (error) return { success: false, error: error.message };
+
+    await logAudit(supabase, {
+      userId: profile.id,
+      action: "task.deleted",
+      entityType: "task",
+      entityId: taskId,
+      previousValue: { product_id: task.product_id },
+    });
+
+    revalidatePath("/tasks");
+    revalidatePath("/");
+    revalidatePath("/activity");
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Unexpected error" };
+  }
+}
+
+export async function bulkDeleteTasks(taskIds: string[]): Promise<ActionResult> {
+  try {
+    const profile = await requirePermission("can_edit_tasks");
+    if (taskIds.length === 0) return { success: false, error: "No tasks selected" };
+
+    const supabase = await createClient();
+    const { data: tasks } = await supabase.from("tasks").select("id, product_id").in("id", taskIds);
+    const productIds = Array.from(new Set((tasks ?? []).map((task) => task.product_id).filter(Boolean)));
+    if (productIds.length === 0) return { success: false, error: "No matching tasks found" };
+
+    const { error } = await supabase.from("products").delete().in("id", productIds);
+    if (error) return { success: false, error: error.message };
+
+    await logAudit(supabase, {
+      userId: profile.id,
+      action: "task.bulk_deleted",
+      entityType: "task",
+      newValue: { count: productIds.length, taskIds },
+    });
+
+    revalidatePath("/tasks");
+    revalidatePath("/");
+    revalidatePath("/activity");
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Unexpected error" };

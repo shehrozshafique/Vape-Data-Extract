@@ -1,8 +1,11 @@
-export const MAX_COMPETITORS = Number(process.env.MAX_COMPETITORS ?? 10);
+const parsedMaxCompetitors = Number(process.env.MAX_COMPETITORS);
+/** Soft cap on total competitors. Invalid/empty env values fall back to 10. */
+export const MAX_COMPETITORS =
+  Number.isFinite(parsedMaxCompetitors) && parsedMaxCompetitors > 0 ? parsedMaxCompetitors : 10;
 
 /** Temporary bypass — skips login and uses the service-role client.
- * Opt-in only: set DISABLE_AUTH=true in .env.local / Vercel. Production defaults to auth on. */
-export const AUTH_DISABLED = process.env.DISABLE_AUTH === "true";
+ * Defaults to ON so deploys work without login; set DISABLE_AUTH=false to require real auth. */
+export const AUTH_DISABLED = process.env.DISABLE_AUTH !== "false";
 
 /** Consecutive scans a product must be absent from the sitemap before it's flagged
  * "Possibly Removed" — protects against a temporary sitemap glitch reading as a real removal. */

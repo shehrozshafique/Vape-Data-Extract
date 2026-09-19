@@ -9,13 +9,13 @@ const GROUPINGS = [
   { value: "day", label: "Daily" },
   { value: "week", label: "Weekly" },
   { value: "month", label: "Monthly" },
-];
+] as const;
 
 const RANGES = [
   { value: "last_30_days", label: "Last 30 days" },
   { value: "last_90_days", label: "Last 90 days" },
   { value: "this_month", label: "This month" },
-];
+] as const;
 
 export function ReportControls() {
   const router = useRouter();
@@ -32,22 +32,32 @@ export function ReportControls() {
   const grouping = searchParams.get("grouping") ?? "day";
   const range = searchParams.get("range") ?? "last_30_days";
   const exportQuery = new URLSearchParams({ grouping, preset: range }).toString();
+  const groupingItems = Object.fromEntries(GROUPINGS.map((item) => [item.value, item.label]));
+  const rangeItems = Object.fromEntries(RANGES.map((item) => [item.value, item.label]));
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Select defaultValue={grouping} onValueChange={(v) => updateParam("grouping", v)}>
-        <SelectTrigger className="h-9 w-32"><SelectValue /></SelectTrigger>
+      <Select value={grouping} items={groupingItems} onValueChange={(value) => updateParam("grouping", value)}>
+        <SelectTrigger className="h-9 min-w-[8rem]" aria-label="Report grouping">
+          <SelectValue placeholder="Daily" />
+        </SelectTrigger>
         <SelectContent>
-          {GROUPINGS.map((g) => (
-            <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+          {GROUPINGS.map((item) => (
+            <SelectItem key={item.value} value={item.value} label={item.label}>
+              {item.label}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
-      <Select defaultValue={range} onValueChange={(v) => updateParam("range", v)}>
-        <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
+      <Select value={range} items={rangeItems} onValueChange={(value) => updateParam("range", value)}>
+        <SelectTrigger className="h-9 min-w-[10rem]" aria-label="Report date range">
+          <SelectValue placeholder="Last 30 days" />
+        </SelectTrigger>
         <SelectContent>
-          {RANGES.map((r) => (
-            <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+          {RANGES.map((item) => (
+            <SelectItem key={item.value} value={item.value} label={item.label}>
+              {item.label}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>

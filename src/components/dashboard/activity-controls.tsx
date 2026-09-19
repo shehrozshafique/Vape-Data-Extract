@@ -34,11 +34,19 @@ export function ActivityControls({ competitors }: { competitors: { id: string; n
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Select defaultValue={searchParams.get("range") ?? "last_30_days"} onValueChange={(v) => updateParam("range", v)}>
-        <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
+      <Select
+        defaultValue={searchParams.get("range") ?? "last_30_days"}
+        items={Object.fromEntries(RANGE_OPTIONS.map((opt) => [opt.value, opt.label]))}
+        onValueChange={(v) => updateParam("range", v)}
+      >
+        <SelectTrigger className="h-9 min-w-[10rem]" aria-label="Date range">
+          <SelectValue placeholder="Last 30 days" />
+        </SelectTrigger>
         <SelectContent>
           {RANGE_OPTIONS.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+            <SelectItem key={opt.value} value={opt.value} label={opt.label}>
+              {opt.label}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>

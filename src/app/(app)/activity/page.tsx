@@ -3,22 +3,25 @@ import { ActivityControls } from "@/components/dashboard/activity-controls";
 import { ActivityChart } from "@/components/dashboard/activity-chart";
 import { ActivityFeedWidget } from "@/components/dashboard/activity-feed-widget";
 import { ScanHistoryTable } from "@/components/competitors/scan-history-table";
+import { ScanProjectNowButton } from "@/components/activity/scan-project-now-button";
 import { getCompetitors, getAllScanHistory } from "@/lib/queries/competitors";
 import { getActivityChartData } from "@/lib/queries/activity-chart";
 import { getActivityFeed } from "@/lib/queries/activity-feed";
 import { getActiveProject } from "@/lib/queries/projects";
-import { getCurrentProfile, getAllowedProjectIds } from "@/lib/auth";
+import { getCurrentProfile, getAllowedProjectIds, getUserPermissions, hasRole } from "@/lib/auth";
 import { getDateRangeForPreset, type DatePreset } from "@/lib/utils/dates";
 
 export default async function ActivityPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
   const profile = await getCurrentProfile();
   const allowedIds = profile ? await getAllowedProjectIds(profile.id) : null;
+  const permissions = profile ? await getUserPermissions(profile.id) : null;
   const activeProject = await getActiveProject(allowedIds);
   const projectId = activeProject?.id ?? null;
 
   const range = getDateRangeForPreset((sp.range as DatePreset) ?? "last_30_days");
   const competitors = await getCompetitors(projectId);
+  const activeCompetitors = competitors.filter((c) => c.status === "active");
   const projectCompetitorIds = competitors.map((c) => c.id);
   const selectedIds = sp.competitors ? sp.competitors.split(",").filter(Boolean) : undefined;
   const competitorIds =
@@ -26,6 +29,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
       ? selectedIds.filter((id) => projectCompetitorIds.includes(id))
       : projectCompetitorIds;
   const stableOrder = competitors.map((c) => c.name);
+  const canScan = Boolean(permissions?.can_scan || hasRole(profile, "manager"));
 
   const [chart, feed, scans] = await Promise.all([
     getActivityChartData({ from: range.from, to: range.to, competitorIds }),
@@ -35,18 +39,21 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Activity</h1>
-        <p className="text-sm text-muted-foreground">
-          {activeProject ? (
-            <>
-              Project <span className="font-medium text-foreground">{activeProject.name}</span> — publishing frequency by
-              competitor.
-            </>
-          ) : (
-            "Compare how frequently each competitor is publishing new products."
-          )}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Activity</h1>
+          <p className="text-sm text-muted-foreground">
+            {activeProject
+              ? `Publishing frequency for ${activeProject.name} by competitor.`
+              : "Compare how frequently each competitor is publishing new products."}
+          </p>
+        </div>
+        {canScan && activeProject && (
+          <ScanProjectNowButton
+            projectId={activeProject.id}
+            competitorCount={activeCompetitors.length}
+          />
+        )}
       </div>
 
       <ActivityControls competitors={competitors.map((c) => ({ id: c.id, name: c.name }))} />

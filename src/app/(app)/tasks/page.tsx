@@ -56,14 +56,9 @@ export default async function TasksPage({
       <div>
         <h1 className="text-xl font-semibold">Products / Tasks</h1>
         <p className="text-sm text-muted-foreground">
-          {activeProject ? (
-            <>
-              Project <span className="font-medium text-foreground">{activeProject.name}</span> — discovered products ready for
-              review.
-            </>
-          ) : (
-            "Every discovered competitor product, ready for your team to review."
-          )}
+          {activeProject
+            ? `Discovered products for ${activeProject.name}, ready for review.`
+            : "Every discovered competitor product, ready for your team to review."}
         </p>
       </div>
 

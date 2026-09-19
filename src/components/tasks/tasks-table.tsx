@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { ProductImage } from "@/components/shared/product-image";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ExternalLink } from "lucide-react";
-import { bulkAssignTasks, bulkUpdateTaskStatus, updateTaskStatus } from "@/lib/actions/tasks";
+import { bulkAssignTasks, bulkUpdateTaskStatus, bulkDeleteTasks, updateTaskStatus } from "@/lib/actions/tasks";
+import { ConfirmDeleteButton } from "@/components/shared/confirm-delete-button";
 import { formatDate, relativeTime } from "@/lib/utils/dates";
 import type { TaskListRow } from "@/lib/queries/tasks";
 import type { TaskStatus } from "@/lib/queries/task-statuses";
@@ -80,29 +81,63 @@ export function TasksTable({
     });
   }
 
+  const statusItems = Object.fromEntries(statuses.map((s) => [s.id, s.label]));
+  const assigneeItems = {
+    unassigned: "Unassign",
+    ...Object.fromEntries(profiles.map((p) => [p.id, p.name?.trim() || p.email])),
+  };
+
   return (
     <div className="space-y-3">
       {canEdit && selected.size > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
           <span className="text-sm font-medium">{selected.size} selected</span>
-          <Select onValueChange={runBulkStatus} disabled={isPending}>
-            <SelectTrigger className="h-8 w-40"><SelectValue placeholder="Change status" /></SelectTrigger>
+          <Select items={statusItems} onValueChange={runBulkStatus} disabled={isPending}>
+            <SelectTrigger className="h-8 w-44" aria-label="Change status for selected">
+              <SelectValue placeholder="Change status" />
+            </SelectTrigger>
             <SelectContent>
               {statuses.map((s) => (
-                <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+                <SelectItem key={s.id} value={s.id} label={s.label}>
+                  {s.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select onValueChange={runBulkAssign} disabled={isPending}>
-            <SelectTrigger className="h-8 w-40"><SelectValue placeholder="Assign to" /></SelectTrigger>
+          <Select items={assigneeItems} onValueChange={runBulkAssign} disabled={isPending}>
+            <SelectTrigger className="h-8 w-44" aria-label="Assign selected">
+              <SelectValue placeholder="Assign to" />
+            </SelectTrigger>
             <SelectContent>
-              <SelectItem value="unassigned">Unassign</SelectItem>
-              {profiles.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.name ?? p.email}</SelectItem>
-              ))}
+              <SelectItem value="unassigned" label="Unassign">
+                Unassign
+              </SelectItem>
+              {profiles.map((p) => {
+                const label = p.name?.trim() || p.email;
+                return (
+                  <SelectItem key={p.id} value={p.id} label={label}>
+                    {label}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
-          <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>Clear</Button>
+          <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
+            Clear
+          </Button>
+          <ConfirmDeleteButton
+            label="Delete selected"
+            title={`Delete ${selected.size} selected product${selected.size === 1 ? "" : "s"}?`}
+            description="This removes the selected products and their tasks from the queue. They may reappear on a later scan if still listed by the competitor."
+            confirmLabel="Delete selected"
+            variant="destructive"
+            disabled={isPending}
+            onConfirm={async () => {
+              const result = await bulkDeleteTasks(Array.from(selected));
+              if (result.success) setSelected(new Set());
+              return result;
+            }}
+          />
         </div>
       )}
 
@@ -157,13 +192,21 @@ export function TasksTable({
                 <TableCell className="whitespace-nowrap text-sm text-muted-foreground">{formatDate(row.product.sourceLastModifiedAt)}</TableCell>
                 <TableCell>
                   {canEdit ? (
-                    <Select defaultValue={row.status?.id} onValueChange={(v) => runRowStatusChange(row.id, v)}>
-                      <SelectTrigger className="h-8 w-32 border-none bg-transparent px-0 shadow-none">
-                        <SelectValue>{row.status && <StatusBadge label={row.status.label} color={row.status.color} />}</SelectValue>
+                    <Select
+                      defaultValue={row.status?.id}
+                      items={statusItems}
+                      onValueChange={(v) => runRowStatusChange(row.id, v)}
+                    >
+                      <SelectTrigger className="h-8 w-36 border-none bg-transparent px-0 shadow-none" aria-label="Task status">
+                        <SelectValue>
+                          {row.status ? <StatusBadge label={row.status.label} color={row.status.color} /> : "Set status"}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {statuses.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+                          <SelectItem key={s.id} value={s.id} label={s.label}>
+                            {s.label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

@@ -8,11 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { relativeTime } from "@/lib/utils/dates";
-import { updateTaskStatus, assignTask, addTaskNote, rescanProduct, updateTaskPriority } from "@/lib/actions/tasks";
+import { updateTaskStatus, assignTask, addTaskNote, rescanProduct, updateTaskPriority, deleteTask } from "@/lib/actions/tasks";
 import type { TaskDetail } from "@/lib/queries/tasks";
 import type { TaskStatus } from "@/lib/queries/task-statuses";
 import type { Profile } from "@/lib/auth";
 import { Loader2, RefreshCw } from "lucide-react";
+import { ConfirmDeleteButton } from "@/components/shared/confirm-delete-button";
 
 export function TaskWorkflowCard({
   task,
@@ -28,6 +29,18 @@ export function TaskWorkflowCard({
   const [isPending, startTransition] = useTransition();
   const [note, setNote] = useState("");
 
+  const statusItems = Object.fromEntries(statuses.map((s) => [s.id, s.label]));
+  const assigneeItems = {
+    unassigned: "Unassigned",
+    ...Object.fromEntries(profiles.map((p) => [p.id, p.name?.trim() || p.email])),
+  };
+  const priorityItems = {
+    low: "Low",
+    normal: "Normal",
+    high: "High",
+    urgent: "Urgent",
+  };
+
   return (
     <Card className="shadow-none">
       <CardHeader>
@@ -40,6 +53,7 @@ export function TaskWorkflowCard({
             {canEdit ? (
               <Select
                 defaultValue={task.status?.id}
+                items={statusItems}
                 disabled={isPending}
                 onValueChange={(v) => {
                   if (!v) return;
@@ -49,10 +63,14 @@ export function TaskWorkflowCard({
                   });
                 }}
               >
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full" aria-label="Task status">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
                 <SelectContent>
                   {statuses.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+                    <SelectItem key={s.id} value={s.id} label={s.label}>
+                      {s.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -66,6 +84,7 @@ export function TaskWorkflowCard({
             {canEdit ? (
               <Select
                 defaultValue={task.assignee?.id ?? "unassigned"}
+                items={assigneeItems}
                 disabled={isPending}
                 onValueChange={(v) =>
                   startTransition(async () => {
@@ -74,12 +93,21 @@ export function TaskWorkflowCard({
                   })
                 }
               >
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full" aria-label="Assignee">
+                  <SelectValue placeholder="Unassigned" />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {profiles.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name ?? p.email}</SelectItem>
-                  ))}
+                  <SelectItem value="unassigned" label="Unassigned">
+                    Unassigned
+                  </SelectItem>
+                  {profiles.map((p) => {
+                    const label = p.name?.trim() || p.email;
+                    return (
+                      <SelectItem key={p.id} value={p.id} label={label}>
+                        {label}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             ) : (
@@ -92,6 +120,7 @@ export function TaskWorkflowCard({
             {canEdit ? (
               <Select
                 defaultValue={task.priority}
+                items={priorityItems}
                 disabled={isPending}
                 onValueChange={(v) => {
                   if (!v) return;
@@ -101,12 +130,22 @@ export function TaskWorkflowCard({
                   });
                 }}
               >
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full" aria-label="Priority">
+                  <SelectValue placeholder="Normal" />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="normal">Normal</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
+                  <SelectItem value="low" label="Low">
+                    Low
+                  </SelectItem>
+                  <SelectItem value="normal" label="Normal">
+                    Normal
+                  </SelectItem>
+                  <SelectItem value="high" label="High">
+                    High
+                  </SelectItem>
+                  <SelectItem value="urgent" label="Urgent">
+                    Urgent
+                  </SelectItem>
                 </SelectContent>
               </Select>
             ) : (
@@ -121,7 +160,7 @@ export function TaskWorkflowCard({
         </div>
 
         {canEdit && (
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -137,6 +176,15 @@ export function TaskWorkflowCard({
               {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
               Re-scan product
             </Button>
+            <ConfirmDeleteButton
+              label="Delete product"
+              title="Delete this product?"
+              description="This removes the product and its task from the queue. It may reappear on a later scan if the competitor still lists it."
+              confirmLabel="Delete product"
+              variant="destructive"
+              onConfirm={async () => deleteTask(task.id)}
+              redirectTo="/tasks"
+            />
           </div>
         )}
 

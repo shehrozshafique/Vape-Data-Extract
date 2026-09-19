@@ -103,13 +103,18 @@ function UserRuleEditor({
           <p className="truncate text-sm font-medium">{row.profile.name ?? "Unnamed"}</p>
           <p className="truncate text-xs text-muted-foreground">{row.profile.email}</p>
         </div>
-        <Select value={role} disabled={disabled || isPending} onValueChange={(v) => v && setRole(v as UserRole)}>
-          <SelectTrigger className="h-8 w-40">
-            <SelectValue />
+        <Select
+          value={role}
+          items={ROLE_LABELS}
+          disabled={disabled || isPending}
+          onValueChange={(v) => v && setRole(v as UserRole)}
+        >
+          <SelectTrigger className="h-8 w-44" aria-label={`Role for ${row.profile.name ?? row.profile.email}`}>
+            <SelectValue placeholder="Select role" />
           </SelectTrigger>
           <SelectContent>
             {Object.entries(ROLE_LABELS).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
+              <SelectItem key={value} value={value} label={label}>
                 {label}
               </SelectItem>
             ))}

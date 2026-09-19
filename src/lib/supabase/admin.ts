@@ -9,13 +9,20 @@ import type { Database } from "./database.types";
  * NEVER import this from a Client Component or expose SUPABASE_SERVICE_ROLE_KEY to the browser.
  * The `server-only` import above makes any accidental client-side import fail at build time.
  */
+/** Public project URL — safe to fall back when NEXT_PUBLIC_* was empty-baked at build. */
+const FALLBACK_SUPABASE_URL = "https://vstpbybpnrpbtcjeqnjo.supabase.co";
+
 export function createAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  // Prefer server-only SUPABASE_URL so the value is not baked empty at build time.
+  const url =
+    process.env.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    FALLBACK_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!url || !key) {
+  if (!key) {
     throw new Error(
-      "Missing Supabase env vars. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel Project Settings → Environment Variables.",
+      "Missing SUPABASE_SERVICE_ROLE_KEY. Set it in Vercel Project Settings → Environment Variables, then redeploy.",
     );
   }
 

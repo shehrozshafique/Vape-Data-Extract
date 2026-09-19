@@ -1,22 +1,34 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const RANGE_OPTIONS = [
   { value: "last_7_days", label: "Last 7 days" },
   { value: "last_30_days", label: "Last 30 days" },
-];
+] as const;
 
-const ALL = "__all__";
+const ALL = "all";
 
-/** The global filter row: changing either control updates every widget below it (KPIs, chart,
- * latest products) except the Competitor Activity Table, which is deliberately always an
- * all-competitors comparison. */
+/** Global dashboard filters. Changing either control updates KPIs, chart, and latest products.
+ * The Competitor Activity table always compares every competitor in the project. */
 export function DashboardFilters({ competitors }: { competitors: { id: string; name: string }[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  const competitorItems = useMemo(
+    () => ({
+      [ALL]: "All competitors",
+      ...Object.fromEntries(competitors.map((competitor) => [competitor.id, competitor.name])),
+    }),
+    [competitors],
+  );
+  const rangeItems = useMemo(
+    () => Object.fromEntries(RANGE_OPTIONS.map((option) => [option.value, option.label])),
+    [],
+  );
 
   function updateParam(key: string, value: string | null) {
     const params = new URLSearchParams(searchParams.toString());
@@ -25,23 +37,36 @@ export function DashboardFilters({ competitors }: { competitors: { id: string; n
     router.push(`${pathname}?${params.toString()}`);
   }
 
+  const competitorValue = searchParams.get("competitor") ?? ALL;
+  const rangeValue = searchParams.get("range") ?? "last_7_days";
+
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Select defaultValue={searchParams.get("competitor") ?? ALL} onValueChange={(v) => updateParam("competitor", v)}>
-        <SelectTrigger className="h-9 w-44"><SelectValue placeholder="All competitors" /></SelectTrigger>
+      <Select value={competitorValue} items={competitorItems} onValueChange={(value) => updateParam("competitor", value)}>
+        <SelectTrigger className="h-9 min-w-[11rem]" aria-label="Filter by competitor">
+          <SelectValue placeholder="All competitors" />
+        </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ALL}>All competitors</SelectItem>
-          {competitors.map((c) => (
-            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+          <SelectItem value={ALL} label="All competitors">
+            All competitors
+          </SelectItem>
+          {competitors.map((competitor) => (
+            <SelectItem key={competitor.id} value={competitor.id} label={competitor.name}>
+              {competitor.name}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
 
-      <Select defaultValue={searchParams.get("range") ?? "last_7_days"} onValueChange={(v) => updateParam("range", v)}>
-        <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
+      <Select value={rangeValue} items={rangeItems} onValueChange={(value) => updateParam("range", value)}>
+        <SelectTrigger className="h-9 min-w-[9.5rem]" aria-label="Date range">
+          <SelectValue placeholder="Last 7 days" />
+        </SelectTrigger>
         <SelectContent>
-          {RANGE_OPTIONS.map((r) => (
-            <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+          {RANGE_OPTIONS.map((option) => (
+            <SelectItem key={option.value} value={option.value} label={option.label}>
+              {option.label}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>

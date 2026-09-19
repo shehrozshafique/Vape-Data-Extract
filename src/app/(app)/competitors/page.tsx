@@ -6,6 +6,7 @@ import { ProductImage } from "@/components/shared/product-image";
 import { CompetitorFormDialog } from "@/components/competitors/competitor-form-dialog";
 import { ScanNowButton } from "@/components/competitors/scan-now-button";
 import { CompetitorStatusToggle } from "@/components/competitors/status-toggle";
+import { CompetitorDeleteButton } from "@/components/competitors/competitor-delete-button";
 import { getCompetitors } from "@/lib/queries/competitors";
 import { getCompetitorActivityTable } from "@/lib/queries/dashboard";
 import { getActiveProject, getProjects } from "@/lib/queries/projects";
@@ -17,8 +18,8 @@ export default async function CompetitorsPage() {
   const profile = await getCurrentProfile();
   const allowedIds = profile ? await getAllowedProjectIds(profile.id) : null;
   const permissions = profile ? await getUserPermissions(profile.id) : null;
-  const activeProject = await getActiveProject(allowedIds);
   const projects = await getProjects();
+  const activeProject = await getActiveProject(allowedIds, projects);
   const projectId = activeProject?.id ?? null;
 
   const [competitors, activity] = await Promise.all([
@@ -52,8 +53,7 @@ export default async function CompetitorsPage() {
         <div>
           <h1 className="text-xl font-semibold">Competitors</h1>
           <p className="text-sm text-muted-foreground">
-            Project <span className="font-medium text-foreground">{activeProject.name}</span> — {competitors.length} /{" "}
-            {MAX_COMPETITORS} slots
+            Monitoring for {activeProject.name}. {competitors.length} of {MAX_COMPETITORS} competitor slots in use.
           </p>
         </div>
         {canManage &&
@@ -118,10 +118,18 @@ export default async function CompetitorsPage() {
                     </Badge>
                   )}
 
-                  <div className="flex items-center gap-2 pt-1">
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
                     <ScanNowButton competitorId={competitor.id} />
                     {canManage && (
-                      <CompetitorFormDialog mode="edit" competitor={competitor} projects={projects} defaultProjectId={competitor.project_id} />
+                      <>
+                        <CompetitorFormDialog
+                          mode="edit"
+                          competitor={competitor}
+                          projects={projects}
+                          defaultProjectId={competitor.project_id}
+                        />
+                        <CompetitorDeleteButton competitorId={competitor.id} competitorName={competitor.name} />
+                      </>
                     )}
                   </div>
                 </CardContent>

@@ -12,7 +12,17 @@ import { createProject, updateProject } from "@/lib/actions/projects";
 import type { Project } from "@/lib/queries/projects";
 import { Loader2, Plus } from "lucide-react";
 
-export function ProjectFormDialog({ mode, project, disabled }: { mode: "create" | "edit"; project?: Project; disabled?: boolean }) {
+export function ProjectFormDialog({
+  mode,
+  project,
+  competitorSitemapUrls = [],
+  disabled,
+}: {
+  mode: "create" | "edit";
+  project?: Project;
+  competitorSitemapUrls?: string[];
+  disabled?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
@@ -23,7 +33,11 @@ export function ProjectFormDialog({ mode, project, disabled }: { mode: "create" 
     startTransition(async () => {
       const result = mode === "create" ? await createProject(formData) : await updateProject(project!.id, formData);
       if (result.success) {
-        toast.success(mode === "create" ? "Client project added." : "Project updated.");
+        toast.success(
+          mode === "create"
+            ? "Client project added. New competitor sitemaps will baseline shortly."
+            : "Project updated. New competitor sitemaps (if any) will baseline shortly.",
+        );
         if (mode === "create") formRef.current?.reset();
         setOpen(false);
       } else {
@@ -49,11 +63,11 @@ export function ProjectFormDialog({ mode, project, disabled }: { mode: "create" 
           )
         }
       />
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{mode === "create" ? "Add Client Project" : `Edit ${project?.name}`}</DialogTitle>
           <DialogDescription>
-            A project is a client website. Competitors you monitor for that client belong to this project.
+            A project is a client website. Add competitor sitemap URLs here to start monitoring them under this project.
           </DialogDescription>
         </DialogHeader>
 
@@ -72,15 +86,32 @@ export function ProjectFormDialog({ mode, project, disabled }: { mode: "create" 
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="status">Status</Label>
-            <Select name="status" defaultValue={project?.status ?? "active"}>
+            <Select name="status" defaultValue={project?.status ?? "active"} items={{ active: "Active", paused: "Paused" }}>
               <SelectTrigger id="status" className="w-full">
-                <SelectValue />
+                <SelectValue placeholder="Active" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="paused">Paused</SelectItem>
+                <SelectItem value="active" label="Active">
+                  Active
+                </SelectItem>
+                <SelectItem value="paused" label="Paused">
+                  Paused
+                </SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="competitor_sitemap_urls">Competitor sitemap URLs</Label>
+            <Textarea
+              id="competitor_sitemap_urls"
+              name="competitor_sitemap_urls"
+              rows={5}
+              defaultValue={competitorSitemapUrls.join("\n")}
+              placeholder={"https://competitor-a.com/sitemap.xml\nhttps://competitor-b.com/product-sitemap.xml"}
+            />
+            <p className="text-xs text-muted-foreground">
+              One URL per line. New URLs create competitors automatically. Existing competitors are kept if you remove a line here — delete those from Competitors.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="notes">Notes</Label>

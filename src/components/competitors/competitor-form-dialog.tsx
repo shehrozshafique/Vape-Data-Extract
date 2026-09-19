@@ -78,13 +78,17 @@ export function CompetitorFormDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 space-y-1.5">
               <Label htmlFor="project_id">Client project</Label>
-              <Select name="project_id" defaultValue={competitor?.project_id ?? defaultProjectId ?? projects[0]?.id}>
+              <Select
+                name="project_id"
+                defaultValue={competitor?.project_id ?? defaultProjectId ?? projects[0]?.id}
+                items={Object.fromEntries(projects.map((project) => [project.id, project.name]))}
+              >
                 <SelectTrigger id="project_id" className="w-full">
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
                 <SelectContent>
                   {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
+                    <SelectItem key={project.id} value={project.id} label={project.name}>
                       {project.name}
                     </SelectItem>
                   ))}
@@ -119,14 +123,28 @@ export function CompetitorFormDialog({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="sitemap_type">Sitemap type</Label>
-              <Select name="sitemap_type" defaultValue={competitor?.sitemap_type ?? "auto"}>
+              <Select
+                name="sitemap_type"
+                defaultValue={competitor?.sitemap_type ?? "auto"}
+                items={{
+                  auto: "Auto-detect",
+                  urlset: "Plain sitemap (urlset)",
+                  sitemap_index: "Sitemap index",
+                }}
+              >
                 <SelectTrigger id="sitemap_type" className="w-full">
-                  <SelectValue />
+                  <SelectValue placeholder="Auto-detect" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="auto">Auto-detect</SelectItem>
-                  <SelectItem value="urlset">Plain sitemap (urlset)</SelectItem>
-                  <SelectItem value="sitemap_index">Sitemap index</SelectItem>
+                  <SelectItem value="auto" label="Auto-detect">
+                    Auto-detect
+                  </SelectItem>
+                  <SelectItem value="urlset" label="Plain sitemap (urlset)">
+                    Plain sitemap (urlset)
+                  </SelectItem>
+                  <SelectItem value="sitemap_index" label="Sitemap index">
+                    Sitemap index
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -135,13 +153,14 @@ export function CompetitorFormDialog({
               <Select
                 name="scan_frequency_minutes"
                 defaultValue={String(competitor?.scan_frequency_minutes ?? DEFAULT_SCAN_FREQUENCY_MINUTES)}
+                items={Object.fromEntries(SCAN_FREQUENCY_OPTIONS.map((opt) => [String(opt.minutes), opt.label]))}
               >
                 <SelectTrigger id="scan_frequency_minutes" className="w-full">
-                  <SelectValue />
+                  <SelectValue placeholder="Once daily" />
                 </SelectTrigger>
                 <SelectContent>
                   {SCAN_FREQUENCY_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.minutes} value={String(opt.minutes)}>
+                    <SelectItem key={opt.minutes} value={String(opt.minutes)} label={opt.label}>
                       {opt.label}
                     </SelectItem>
                   ))}
@@ -150,13 +169,21 @@ export function CompetitorFormDialog({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="status">Status</Label>
-              <Select name="status" defaultValue={competitor?.status ?? "active"}>
+              <Select
+                name="status"
+                defaultValue={competitor?.status ?? "active"}
+                items={{ active: "Active", paused: "Paused" }}
+              >
                 <SelectTrigger id="status" className="w-full">
-                  <SelectValue />
+                  <SelectValue placeholder="Active" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="paused">Paused</SelectItem>
+                  <SelectItem value="active" label="Active">
+                    Active
+                  </SelectItem>
+                  <SelectItem value="paused" label="Paused">
+                    Paused
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

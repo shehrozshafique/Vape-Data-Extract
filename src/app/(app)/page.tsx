@@ -24,7 +24,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const projects = await getProjects();
   const visibleProjects =
     allowedIds === null ? projects : projects.filter((p) => allowedIds.includes(p.id));
-  const activeProject = await getActiveProject(allowedIds);
+  const activeProject = await getActiveProject(allowedIds, visibleProjects);
 
   if (visibleProjects.length === 0) {
     return (

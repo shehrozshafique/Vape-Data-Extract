@@ -3,7 +3,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProductImage } from "@/components/shared/product-image";
 import { ProjectFormDialog } from "@/components/projects/project-form-dialog";
-import { getProjects, getCompetitorCountForProject } from "@/lib/queries/projects";
+import { ProjectDeleteButton } from "@/components/projects/project-delete-button";
+import {
+  getProjects,
+  getCompetitorCountsByProject,
+  getCompetitorSitemapUrlsByProject,
+} from "@/lib/queries/projects";
 import { getCurrentProfile, getUserPermissions, hasRole } from "@/lib/auth";
 import { relativeTime } from "@/lib/utils/dates";
 
@@ -12,8 +17,12 @@ export default async function ProjectsPage() {
   const permissions = profile ? await getUserPermissions(profile.id) : null;
   const canManage = Boolean(permissions?.can_manage_competitors || hasRole(profile, "manager"));
   const projects = await getProjects();
+  const projectIds = projects.map((p) => p.id);
 
-  const counts = await Promise.all(projects.map((p) => getCompetitorCountForProject(p.id)));
+  const [counts, sitemapUrls] = await Promise.all([
+    getCompetitorCountsByProject(projectIds),
+    getCompetitorSitemapUrlsByProject(projectIds),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -33,48 +42,60 @@ export default async function ProjectsPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {projects.map((project, index) => (
-            <Card key={project.id} className="shadow-none">
-              <CardContent className="space-y-4 p-5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <ProductImage src={project.logo_url} alt={project.name} size={40} />
-                    <div className="min-w-0">
-                      <p className="truncate font-medium leading-tight">{project.name}</p>
-                      <a
-                        href={project.website_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="truncate text-xs text-primary hover:underline"
-                      >
-                        {project.domain}
-                      </a>
+          {projects.map((project) => {
+            const count = counts[project.id] ?? 0;
+            return (
+              <Card key={project.id} className="shadow-none">
+                <CardContent className="space-y-4 p-5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <ProductImage src={project.logo_url} alt={project.name} size={40} />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium leading-tight">{project.name}</p>
+                        <a
+                          href={project.website_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="truncate text-xs text-primary hover:underline"
+                        >
+                          {project.domain}
+                        </a>
+                      </div>
+                    </div>
+                    <Badge variant={project.status === "active" ? "default" : "outline"} className="shrink-0 capitalize">
+                      {project.status}
+                    </Badge>
+                  </div>
+
+                  <div className="rounded-md bg-muted/50 px-3 py-2 text-sm">
+                    <span className="font-semibold tabular-nums">{count}</span>
+                    <span className="text-muted-foreground"> competitor{count === 1 ? "" : "s"}</span>
+                  </div>
+
+                  {project.notes && <p className="line-clamp-2 text-xs text-muted-foreground">{project.notes}</p>}
+
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <span className="text-[11px] text-muted-foreground">Updated {relativeTime(project.updated_at)}</span>
+                    <div className="flex items-center gap-2">
+                      <Link href="/competitors" className="text-xs font-medium text-primary hover:underline">
+                        Competitors
+                      </Link>
+                      {canManage && (
+                        <>
+                          <ProjectFormDialog
+                            mode="edit"
+                            project={project}
+                            competitorSitemapUrls={sitemapUrls[project.id] ?? []}
+                          />
+                          <ProjectDeleteButton projectId={project.id} projectName={project.name} />
+                        </>
+                      )}
                     </div>
                   </div>
-                  <Badge variant={project.status === "active" ? "default" : "outline"} className="shrink-0 capitalize">
-                    {project.status}
-                  </Badge>
-                </div>
-
-                <div className="rounded-md bg-muted/50 px-3 py-2 text-sm">
-                  <span className="font-semibold tabular-nums">{counts[index]}</span>
-                  <span className="text-muted-foreground"> competitor{counts[index] === 1 ? "" : "s"}</span>
-                </div>
-
-                {project.notes && <p className="line-clamp-2 text-xs text-muted-foreground">{project.notes}</p>}
-
-                <div className="flex items-center justify-between gap-2 pt-1">
-                  <span className="text-[11px] text-muted-foreground">Updated {relativeTime(project.updated_at)}</span>
-                  <div className="flex items-center gap-2">
-                    <Link href={`/competitors`} className="text-xs font-medium text-primary hover:underline">
-                      Competitors
-                    </Link>
-                    {canManage && <ProjectFormDialog mode="edit" project={project} />}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

@@ -17,8 +17,14 @@ export function ScanNowButton({ competitorId, size = "sm" }: { competitorId: str
       onClick={() =>
         startTransition(async () => {
           const result = await triggerManualScan(competitorId);
-          if (result.success) toast.success("Scan complete.");
-          else toast.error(result.error);
+          if (result.success) {
+            const found = result.newProducts ?? 0;
+            toast.success(
+              found > 0
+                ? `Scan complete. Found ${found} new product${found === 1 ? "" : "s"}.`
+                : "Scan complete. No new products found.",
+            );
+          } else toast.error(result.error);
         })
       }
     >

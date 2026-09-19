@@ -14,11 +14,15 @@ export function ProjectSwitcher({ projects, activeProjectId }: { projects: Proje
     return <p className="px-3 text-xs text-muted-foreground">No projects yet</p>;
   }
 
+  const items = Object.fromEntries(projects.map((project) => [project.id, project.name]));
+  const activeName = activeProjectId ? items[activeProjectId] : undefined;
+
   return (
     <div className="px-3 pb-2">
       <p className="mb-1.5 px-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Project</p>
       <Select
         value={activeProjectId ?? undefined}
+        items={items}
         disabled={isPending}
         onValueChange={(value) => {
           if (!value) return;
@@ -28,12 +32,12 @@ export function ProjectSwitcher({ projects, activeProjectId }: { projects: Proje
           });
         }}
       >
-        <SelectTrigger className="h-8 w-full text-xs">
+        <SelectTrigger className="h-9 w-full text-sm" title={activeName}>
           <SelectValue placeholder="Select project" />
         </SelectTrigger>
         <SelectContent>
           {projects.map((project) => (
-            <SelectItem key={project.id} value={project.id}>
+            <SelectItem key={project.id} value={project.id} label={project.name}>
               {project.name}
             </SelectItem>
           ))}
